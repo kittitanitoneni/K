@@ -96,7 +96,7 @@
         button:disabled { background-color: #cccccc; cursor: not-allowed; }
         
         #filter-4k-btn {
-            background-color: #28a745; /* Alapból aktív (zöld) */
+            background-color: #28a745; 
         }
         #filter-4k-btn:hover { background-color: #218838; }
         
@@ -191,6 +191,10 @@
             color: #333; 
             margin-right: 5px;
             white-space: nowrap;
+        }
+
+        /* Színváltó átmenet a számláló részeire */
+        #counter-current, #counter-total {
             transition: color 0.1s ease-in-out;
         }
 
@@ -306,7 +310,9 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
         
         <div id="fullscreen-wrapper">
             <div id="hud-controls">
-                <span id="image-counter" title="Aktuális kép">0</span>
+                <span id="image-counter" title="Aktuális / Összes">
+                    <span id="counter-current">0</span>/<span id="counter-total">0</span>
+                </span>
                 <input type="number" id="timer-input" value="3" min="1" max="9" title="Időzítés (mp)">
                 <button id="autoplay-btn" title="Automata lejátszás"></button>
                 <span class="zoom-text" id="zoom-text">100%</span>
@@ -337,7 +343,7 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
         let keepZoomAndScroll = false;
         let isSearching = false; 
         let currentLoadSequence = 0; 
-        let is4kFilterActive = true; // Szűrő alapértelmezett állapota
+        let is4kFilterActive = true; 
         
         const MAX_ZOOM = 1.0; 
 
@@ -355,7 +361,10 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
         const progressText = document.getElementById('progress-text');
 
         const hudControls = document.getElementById('hud-controls');
-        const imageCounter = document.getElementById('image-counter');
+        // A két új számláló span
+        const counterCurrent = document.getElementById('counter-current');
+        const counterTotal = document.getElementById('counter-total');
+        
         const timerInput = document.getElementById('timer-input');
         const autoplayBtn = document.getElementById('autoplay-btn');
         const zoomText = document.getElementById('zoom-text');
@@ -367,9 +376,9 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
         filter4kBtn.addEventListener('click', () => {
             is4kFilterActive = !is4kFilterActive;
             if (is4kFilterActive) {
-                filter4kBtn.style.backgroundColor = '#28a745'; // Aktív Zöld
+                filter4kBtn.style.backgroundColor = '#28a745'; 
             } else {
-                filter4kBtn.style.backgroundColor = '#6c757d'; // Inaktív Szürke
+                filter4kBtn.style.backgroundColor = '#6c757d'; 
             }
         });
 
@@ -722,16 +731,12 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
         });
 
         // --- HÁTTÉRBEN TÖRTÉNŐ KERESÉS ÉS 4K SZŰRÉS ---
-        
-        // Ellenőrzi, hogy a kép létezik-e, és ha be van kapcsolva a szűrő, megnézi elég nagy-e.
-        // A 4K szabvány minimum (3840 pixel) szélességet vagy magasságot vár el.
         function checkImageValid(url, enforce4K) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => {
                     let isValid = true;
                     if (enforce4K) {
-                        // Ha bármelyik oldala eléri a ~4K felbontást (vagy a teljes pixelszámot)
                         isValid = (img.naturalWidth >= 3800 || img.naturalHeight >= 3800 || (img.naturalWidth * img.naturalHeight) >= 8000000);
                     }
                     resolve({ exists: true, isValid: isValid });
@@ -742,8 +747,11 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
         }
 
         function handleNewImageFound() {
+            // Összes frissítése folyamatosan, amíg keres
+            counterTotal.textContent = images.length;
+
             if (images.length > 0) {
-                imageCounter.textContent = `${currentIndex + 1}`;
+                counterCurrent.textContent = `${currentIndex + 1}`;
             }
 
             if (images.length === 1) {
@@ -761,7 +769,6 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
             let rawUrls = text.split('\n').map(url => url.trim()).filter(url => url.length > 0);
 
             if (rawUrls.length === 0) return;
-            
             rawUrls = rawUrls.map(url => url.replaceAll('mapij', newWord));
 
             loadBtn.disabled = true;
@@ -774,8 +781,12 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
             keepZoomAndScroll = false; 
             isSearching = true;
             
-            imageCounter.style.color = '';
-            imageCounter.textContent = "0";
+            // Keresés indul: aktuális fehér/fekete, összes szürke
+            counterCurrent.style.color = '';
+            counterTotal.style.color = '#999'; 
+            counterCurrent.textContent = "0";
+            counterTotal.textContent = "0";
+
             statusText.textContent = "Térképsorozatok keresése elkezdődött... Kérlek várj.";
 
             for (const url of rawUrls) {
@@ -793,15 +804,12 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
                         const check = await checkImageValid(testUrl, is4kFilterActive);
                         
                         if (check.exists) {
-                            // A fájl létezik, tehát a sorozat nem szakadt meg
                             consecutiveErrors = 0;
-                            // Ha a 4K szűrőn is átment (vagy ki van kapcsolva a szűrő)
                             if (check.isValid) {
                                 images.push(testUrl);
                                 handleNewImageFound();
                             }
                         } else {
-                            // A fájl egyáltalán nem létezik a szerveren
                             consecutiveErrors++;
                             if (consecutiveErrors >= 10) break; 
                         }
@@ -816,7 +824,9 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
                 }
             }
 
+            // Keresés befejeződött: összes számának színe visszaáll
             isSearching = false;
+            counterTotal.style.color = '';
             loadBtn.disabled = false;
             progressText.textContent = "";
             if (images.length > 0) {
@@ -834,8 +844,9 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
             const mySequence = currentLoadSequence;
             const targetUrl = images[currentIndex];
             
-            imageCounter.textContent = `${currentIndex + 1}`;
-            imageCounter.style.color = '#999'; 
+            // Amíg tölt a konkrét kép, az aktuális számát beszürkítjük
+            counterCurrent.textContent = `${currentIndex + 1}`;
+            counterCurrent.style.color = '#999'; 
             statusText.textContent = `Térkép betöltése... ${currentIndex + 1}` + (isSearching ? " (Keresés a háttérben...)" : "");
             
             const preloader = new Image();
@@ -867,9 +878,10 @@ https://cdn.mapij.com/content/250403/0001-01.jpg</textarea>
                     requestAnimationFrame(() => setRelativeCenter(0.5, 0.5));
                 }
                 
-                imageCounter.style.color = ''; 
+                // Letöltés kész: visszakapja a normál színét
+                counterCurrent.style.color = ''; 
                 statusText.textContent = `Térkép ${currentIndex + 1}` + (isSearching ? " (Keresés a háttérben...)" : "");
-                imageCounter.textContent = `${currentIndex + 1}`; 
+                counterCurrent.textContent = `${currentIndex + 1}`; 
             };
             
             preloader.src = targetUrl;
