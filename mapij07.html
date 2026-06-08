@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="mapij">
+    
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/0056b3/FFFFFF?text=mapij">
+    
+    <title>mapij</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        body.fs-active { overflow: hidden; }
+        
+        .control-panel {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-row h3 {
+            margin: 0;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            resize: vertical;
+            white-space: pre;
+        }
+        .list-selector-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .list-selector-row select {
+            flex-grow: 1;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-weight: bold;
+        }
+        .settings-row {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #17a2b8;
+        }
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #0056b3;
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #004494; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        
+        .filter-btn { background-color: #6c757d; }
+        .filter-btn:hover { background-color: #5a6268; }
+        .filter-btn.active { background-color: #28a745; }
+        .filter-btn.active:hover { background-color: #218838; }
+        
+        #shuffle-btn { background-color: #6c757d; }
+        #shuffle-btn:hover { background-color: #5a6268; }
+        
+        #download-json-btn { background-color: #28a745; display: none; }
+        #download-json-btn:hover { background-color: #218838; }
+
+        input[type="text"] {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #333;
+            flex-grow: 1;
+            min-width: 150px;
+        }
+        
+        .image-viewer-container {
+            text-align: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #fullscreen-wrapper {
+            width: 100%;
+            position: relative;
+            background-color: #e9ecef;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+            flex-direction: column;
+        }
+        
+        #fullscreen-wrapper.is-fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background-color: #111;
+            border: none;
+            border-radius: 0;
+            margin: 0;
+            display: block; 
+        }
+
+        .image-viewport {
+            width: 100%;
+            height: 60vh;
+            overflow: auto;
+            position: relative;
+            -webkit-overflow-scrolling: touch; 
+        }
+        #fullscreen-wrapper.is-fullscreen .image-viewport {
+            height: 100vh; 
+            width: 100vw;
+        }
+
+        #current-image {
+            display: none;
+            margin: 0 auto;
+            transform-origin: top left;
+            max-width: none !important;
+            max-height: none !important;
+        }
+
+        #hud-controls {
+            display: none; 
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px 4px 0 0;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: row;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        #image-counter {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333; 
+            margin-right: 5px;
+            white-space: nowrap;
+        }
+
+        #counter-current, #counter-total { transition: color 0.1s ease-in-out; }
+
+        .zoom-text {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333; 
+            min-width: 50px;
+            text-align: center;
+            display: inline-block;
+            user-select: none;
+        }
+
+        #fullscreen-wrapper.is-fullscreen #hud-controls {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-bottom: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: auto;
+        }
+
+        #fullscreen-wrapper.is-fullscreen #image-counter,
+        #fullscreen-wrapper.is-fullscreen .zoom-text { color: #fff; }
+
+        #timer-input {
+            width: 45px;
+            padding: 6px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        #hud-controls button {
+            background-color: #444;
+            border: 1px solid #666;
+            width: 35px;
+            height: 35px;
+            padding: 0;
+            font-size: 1.2em;
+            line-height: 1;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        #hud-controls button:hover { background-color: #666; }
+        #hud-controls button:disabled { background-color: #333; color: #777; cursor: not-allowed; }
+        
+        #autoplay-btn { background-color: #28a745 !important; border-color: #28a745 !important; }
+        #autoplay-btn.playing { background-color: #dc3545 !important; border-color: #dc3545 !important; }
+        
+        #fullscreen-toggle-btn { background-color: #666; font-size: 1.4em; padding-bottom: 2px; }
+
+        @media (max-width: 600px) {
+            #hud-controls { flex-wrap: nowrap; justify-content: center; gap: 6px; padding: 8px 6px; }
+            #hud-controls button { width: 30px; height: 30px; font-size: 1.1em; }
+            #timer-input { width: 35px; padding: 4px; font-size: 0.9em; }
+            .zoom-text { font-size: 0.9em; min-width: 40px; }
+            #image-counter { font-size: 0.95em; margin-right: 2px; }
+            .header-buttons { width: 100%; justify-content: space-between; }
+            .header-buttons button { flex-grow: 1; padding: 6px 10px; font-size: 0.9em; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel">
+        <div class="header-row">
+            <h3>Térképek linkjei</h3>
+            <div class="header-buttons">
+                <button id="filter-1k-btn" class="filter-btn" title="Csak 1K vagy nagyobb térképek betöltése">1K</button>
+                <button id="filter-2k-btn" class="filter-btn" title="Csak 2K vagy nagyobb térképek betöltése">2K</button>
+                <button id="filter-4k-btn" class="filter-btn active" title="Csak 4K vagy nagyobb térképek betöltése">4K</button>
+                <button id="shuffle-btn" title="Sorok megkeverése">Keverés</button>
+            </div>
+        </div>
+        <textarea id="image-urls" rows="6">https://raw.githubusercontent.com/kittitanitoneni/K/refs/heads/main/Map_01.jpg</textarea>
+        
+        <div class="list-selector-row">
+            <label for="map-list-select" style="font-weight: bold; color: #495057;">Online listák:</label>
+            <select id="map-list-select">
+                <option value="default">Saját megadott linkek (alapértelmezett)</option>
+            </select>
+        </div>
+        
+        <div class="list-selector-row">
+            <label for="json-list-select" style="font-weight: bold; color: #495057;">JSON fájlok:</label>
+            <select id="json-list-select">
+                <option value="default">Válassz egy előre ellenőrzött JSON listát...</option>
+            </select>
+        </div>
+        
+        <div class="settings-row">
+            <label for="replace-input" style="font-weight: bold; color: #495057;">A 'mapij' szó lecserélése erre:</label>
+            <input type="text" id="replace-input" value="mapij" placeholder="Írd be ide...">
+            <button id="load-btn">Betöltés</button>
+            <button id="download-json-btn" title="A megtalált érvényes térképek adatainak letöltése">JSON letöltés</button>
+        </div>
+    </div>
+
+    <div class="image-viewer-container">
+        
+        <div id="fullscreen-wrapper">
+            <div id="hud-controls">
+                <span id="image-counter" title="Aktuális / Összes">
+                    <span id="counter-current">0</span>/<span id="counter-total">0</span>
+                </span>
+                <input type="number" id="timer-input" value="3" min="1" max="9" title="Időzítés (mp)">
+                <button id="autoplay-btn" title="Automata lejátszás"></button>
+                <span class="zoom-text" id="zoom-text">100%</span>
+                <button id="zoom-out-btn" title="Kicsinyítés">-</button>
+                <button id="zoom-in-btn" title="Nagyítás">+</button>
+                <button id="fullscreen-toggle-btn" title="Teljes képernyő">□</button>
+            </div>
+
+            <div class="image-viewport" id="viewport">
+                <img id="current-image" src="" alt="Megjelenített kép">
+            </div>
+        </div>
+
+        <p id="status-text">Még nincsenek térképek betöltve.</p>
+        <p id="progress-text"></p>
+    </div>
+
+    <script>
+        let images = [];
+        let currentImagesData = []; 
+        let currentIndex = 0;
+        
+        let isAutoPlaying = false;
+        let playInterval;
+        let originalAutoplayTime = 3; 
+        let currentCountdown = 3;
+
+        let minScale = 1.0;
+        let currentScale = 1.0;
+        let savedRelX = 0.5;
+        let savedRelY = 0.5;
+        let keepZoomAndScroll = false;
+        
+        let isSearching = false; 
+        let currentLoadSequence = 0; 
+        let currentSearchId = 0; 
+        
+        let searchCache = {};
+        
+        let activeFilter = '4k'; 
+        const MAX_ZOOM = 1.0; 
+
+        const defaultUrlsText = "https://raw.githubusercontent.com/kittitanitoneni/K/refs/heads/main/Map_01.jpg";
+
+        const urlsInput = document.getElementById('image-urls');
+        const shuffleBtn = document.getElementById('shuffle-btn');
+        const filter1kBtn = document.getElementById('filter-1k-btn');
+        const filter2kBtn = document.getElementById('filter-2k-btn');
+        const filter4kBtn = document.getElementById('filter-4k-btn');
+        const replaceInput = document.getElementById('replace-input');
+        const loadBtn = document.getElementById('load-btn');
+        const downloadJsonBtn = document.getElementById('download-json-btn');
+        const listSelect = document.getElementById('map-list-select');
+        const jsonListSelect = document.getElementById('json-list-select'); 
+        
+        const fsWrapper = document.getElementById('fullscreen-wrapper');
+        const viewport = document.getElementById('viewport');
+        const currentImage = document.getElementById('current-image');
+        const statusText = document.getElementById('status-text');
+        const progressText = document.getElementById('progress-text');
+
+        const hudControls = document.getElementById('hud-controls');
+        const counterCurrent = document.getElementById('counter-current');
+        const counterTotal = document.getElementById('counter-total');
+        
+        const timerInput = document.getElementById('timer-input');
+        const autoplayBtn = document.getElementById('autoplay-btn');
+        const zoomText = document.getElementById('zoom-text');
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const fullscreenToggleBtn = document.getElementById('fullscreen-toggle-btn');
+
+        // --- FELBONTÁS SZŰRŐ GOMBOK ---
+        function updateFilterButtons() {
+            filter1kBtn.classList.toggle('active', activeFilter === '1k');
+            filter2kBtn.classList.toggle('active', activeFilter === '2k');
+            filter4kBtn.classList.toggle('active', activeFilter === '4k');
+        }
+
+        filter1kBtn.addEventListener('click', () => { activeFilter = activeFilter === '1k' ? 'none' : '1k'; updateFilterButtons(); });
+        filter2kBtn.addEventListener('click', () => { activeFilter = activeFilter === '2k' ? 'none' : '2k'; updateFilterButtons(); });
+        filter4kBtn.addEventListener('click', () => { activeFilter = activeFilter === '4k' ? 'none' : '4k'; updateFilterButtons(); });
+
+        // --- GITHUB ONLINE LISTÁK ÉS JSON-EK LETÖLTÉSE ---
+        const githubBaseUrl = 'https://raw.githubusercontent.com/kittitanitoneni/K/refs/heads/main/mapij_text_';
+        let fetchedLists = {};
+        
+        const githubJsonBaseUrl = 'https://raw.githubusercontent.com/kittitanitoneni/K/refs/heads/main/mapij_json_';
+        let fetchedJsonLists = {}; 
+
+        async function fetchExternalLists() {
+            let fileIndex = 1;
+            while (true) {
+                const paddedNum = String(fileIndex).padStart(2, '0');
+                const url = `${githubBaseUrl}${paddedNum}.txt`;
+
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const text = await response.text();
+                        const lines = text.split('\n');
+                        let title = `Lista ${paddedNum}`;
+                        let urlsContent = '';
+
+                        if (lines.length > 0) {
+                            title = lines[0].trim() || title; 
+                            urlsContent = lines.slice(1).join('\n').trim();
+                        }
+                        fetchedLists[paddedNum] = urlsContent;
+
+                        const option = document.createElement('option');
+                        option.value = paddedNum;
+                        option.textContent = title; 
+                        listSelect.appendChild(option);
+                        fileIndex++;
+                    } else {
+                        break;
+                    }
+                } catch (e) {
+                    break;
+                }
+            }
+        }
+
+        async function fetchJsonLists() {
+            let fileIndex = 1;
+            while (true) {
+                const paddedNum = String(fileIndex).padStart(2, '0');
+                const url = `${githubJsonBaseUrl}${paddedNum}.json`;
+
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const jsonData = await response.json();
+                        
+                        let title = `JSON Lista ${paddedNum}`;
+                        let mapsData = jsonData;
+
+                        // Új JSON formátum támogatása (ha van title attribútuma)
+                        if (jsonData && !Array.isArray(jsonData) && jsonData.maps) {
+                            title = jsonData.title || title;
+                            mapsData = jsonData.maps;
+                        }
+
+                        fetchedJsonLists[paddedNum] = { title: title, maps: mapsData };
+
+                        const option = document.createElement('option');
+                        option.value = paddedNum;
+                        option.textContent = title;
+                        jsonListSelect.appendChild(option);
+                        fileIndex++;
+                    } else {
+                        break;
+                    }
+                } catch (e) {
+                    break;
+                }
+            }
+        }
+
+        // Txt lista választó event
+        listSelect.addEventListener('change', (e) => {
+            const selectedVal = e.target.value;
+            jsonListSelect.value = 'default';
+
+            if (isSearching) {
+                currentSearchId++; 
+                isSearching = false;
+                loadBtn.textContent = "Betöltés";
+                loadBtn.style.backgroundColor = ""; 
+                progressText.textContent = "";
+                counterTotal.style.color = '';
+                downloadJsonBtn.style.display = 'none';
+            }
+
+            if (selectedVal === 'default') {
+                urlsInput.value = defaultUrlsText;
+            } else if (fetchedLists[selectedVal]) {
+                urlsInput.value = fetchedLists[selectedVal];
+                setTimeout(() => { loadBtn.click(); }, 100);
+            }
+        });
+
+        // JSON lista választó event
+        jsonListSelect.addEventListener('change', (e) => {
+            const selectedVal = e.target.value;
+            if (selectedVal === 'default') return;
+
+            listSelect.value = 'default';
+
+            if (isSearching) {
+                currentSearchId++; 
+                isSearching = false;
+                loadBtn.textContent = "Betöltés";
+                loadBtn.style.backgroundColor = ""; 
+                progressText.textContent = "";
+                counterTotal.style.color = '';
+            }
+
+            const newWord = replaceInput.value.trim() || 'mapij';
+            
+            // Kinyerjük a maps tömböt a tárolt objektumból
+            const rawJsonData = fetchedJsonLists[selectedVal].maps; 
+            
+            images = [];
+            currentImagesData = [];
+
+            rawJsonData.forEach(item => {
+                const w = parseInt(item.width, 10);
+                const h = parseInt(item.height, 10);
+                const maxDim = Math.max(w, h);
+                const totalPixels = w * h;
+
+                let isValid = true;
+                if (activeFilter === '4k') isValid = (maxDim >= 3800 || totalPixels >= 8000000);
+                else if (activeFilter === '2k') isValid = (maxDim >= 1900 || totalPixels >= 2000000);
+                else if (activeFilter === '1k') isValid = (maxDim >= 950 || totalPixels >= 800000);
+
+                if (isValid) {
+                    const finalUrl = item.map_URL.replaceAll('mapij', newWord);
+                    images.push(finalUrl);
+                    currentImagesData.push({ url: finalUrl, width: w, height: h });
+                }
+            });
+
+            currentIndex = 0;
+            counterTotal.textContent = images.length;
+            counterCurrent.textContent = images.length > 0 ? "1" : "0";
+            counterCurrent.style.color = ''; 
+            counterTotal.style.color = '';
+            
+            fsWrapper.style.display = images.length > 0 ? 'flex' : 'none';
+            hudControls.style.display = images.length > 0 ? 'flex' : 'none';
+            autoplayBtn.disabled = images.length === 0;
+            downloadJsonBtn.style.display = images.length > 0 ? 'inline-block' : 'none';
+            progressText.textContent = "";
+
+            if (images.length > 0) {
+                statusText.textContent = `Térkép 1 (JSON-ből azonnal betöltve)`;
+                updateImage();
+            } else {
+                statusText.textContent = "A kiválasztott JSON nem tartalmaz a szűrőnek megfelelő térképet.";
+            }
+        });
+
+        fetchExternalLists();
+        fetchJsonLists(); 
+
+        // --- JSON LETÖLTÉS LOGIKA (EGY SORBA RENDEZVE) ---
+        downloadJsonBtn.addEventListener('click', () => {
+            const newWord = replaceInput.value.trim() || 'mapij';
+            
+            let currentTitle = "Saját térképek";
+            if (listSelect.value !== 'default') {
+                currentTitle = listSelect.options[listSelect.selectedIndex].textContent;
+            } else if (jsonListSelect.value !== 'default') {
+                currentTitle = jsonListSelect.options[jsonListSelect.selectedIndex].textContent;
+            }
+            
+            const jsonMapsArray = currentImagesData.map(item => {
+                return {
+                    "map_URL": item.url.replaceAll(newWord, 'mapij'),
+                    "width": item.width.toString(),
+                    "height": item.height.toString()
+                };
+            });
+
+            // JSON kimeneti struktúra a címmel együtt - paraméter nélkül (vagy null értékkel) egysoros lesz
+            const jsonExport = {
+                "title": currentTitle,
+                "maps": jsonMapsArray
+            };
+
+            const dataStr = JSON.stringify(jsonExport); // Itt a módosítás: nincs "null, 2" paraméter
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mapij_links.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // --- BILLENTYŰZET VEZÉRLÉS ---
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            if (images.length === 0) return;
+
+            const scrollStep = 50; 
+
+            switch (e.key) {
+                case 'PageDown':
+                case 'n': case 'N': e.preventDefault(); showNextImage(); resetIntervalIfPlaying(); break;
+                case 'PageUp':
+                case 'b': case 'B': e.preventDefault(); showPrevImage(); resetIntervalIfPlaying(); break;
+                case '+': e.preventDefault(); actionZoomIn(); break;
+                case '-': e.preventDefault(); actionZoomOut(); break;
+                case 'ArrowUp': e.preventDefault(); viewport.scrollTop -= scrollStep; break;
+                case 'ArrowDown': e.preventDefault(); viewport.scrollTop += scrollStep; break;
+                case 'ArrowLeft': e.preventDefault(); viewport.scrollLeft -= scrollStep; break;
+                case 'ArrowRight': e.preventDefault(); viewport.scrollLeft += scrollStep; break;
+                case 'm': case 'M': e.preventDefault(); jumpImages(20); break;
+                case 'v': case 'V': e.preventDefault(); jumpImages(-20); break;
+                case 'a': case 'A': e.preventDefault(); if (!isAutoPlaying) toggleAutoplay(); break;
+                case 's': case 'S': e.preventDefault(); if (isAutoPlaying) toggleAutoplay(); break;
+            }
+
+            if (e.key >= '1' && e.key <= '9') {
+                e.preventDefault();
+                timerInput.value = e.key; 
+                originalAutoplayTime = parseInt(e.key);
+                if (isAutoPlaying) resetIntervalIfPlaying();
+            }
+        });
+
+        // --- KEVERÉS FUNKCIÓ ---
+        shuffleBtn.addEventListener('click', () => {
+            let urls = urlsInput.value.split('\n').filter(line => line.trim() !== '');
+            for (let i = urls.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [urls[i], urls[j]] = [urls[j], urls[i]];
+            }
+            urlsInput.value = urls.join('\n');
+            if (images.length > 0 && !isSearching) {
+                for (let i = images.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [images[i], images[j]] = [images[j], images[i]];
+                    [currentImagesData[i], currentImagesData[j]] = [currentImagesData[j], currentImagesData[i]];
+                }
+                currentIndex = 0;
+                updateImage();
+            }
+        });
+
+        replaceInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadBtn.click(); } });
+
+        // --- TELJES KÉPERNYŐ ÉS RESIZE LOGIKA ---
+        function enterFullscreen() {
+            fsWrapper.classList.add('is-fullscreen');
+            document.body.classList.add('fs-active');
+            fullscreenToggleBtn.textContent = 'X';
+            try {
+                if (fsWrapper.requestFullscreen) fsWrapper.requestFullscreen().catch(()=>{});
+                else if (fsWrapper.webkitRequestFullscreen) fsWrapper.webkitRequestFullscreen();
+            } catch(e) {}
+        }
+
+        function closeFullscreen() {
+            fsWrapper.classList.remove('is-fullscreen');
+            document.body.classList.remove('fs-active');
+            fullscreenToggleBtn.textContent = '□';
+            try {
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                }
+            } catch(e) {}
+        }
+
+        fullscreenToggleBtn.addEventListener('click', () => {
+            if (document.fullscreenElement || document.webkitFullscreenElement || fsWrapper.classList.contains('is-fullscreen')) closeFullscreen();
+            else enterFullscreen();
+        });
+
+        document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) closeFullscreen(); });
+        document.addEventListener('webkitfullscreenchange', () => { if (!document.webkitFullscreenElement) closeFullscreen(); });
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (currentImage.style.display === 'block') {
+                const center = getRelativeCenter(); 
+                const vWidth = viewport.clientWidth - 15;
+                const vHeight = viewport.clientHeight - 15; 
+                const nWidth = currentImage.naturalWidth;
+                const nHeight = currentImage.naturalHeight;
+                
+                if (nWidth > 0 && nHeight > 0) minScale = Math.min(vWidth / nWidth, vHeight / nHeight, MAX_ZOOM);
+                else minScale = MAX_ZOOM;
+                
+                if (currentScale < minScale) currentScale = minScale;
+                applyZoomCSS();
+                requestAnimationFrame(() => setRelativeCenter(center.relX, center.relY));
+            }
+        });
+        resizeObserver.observe(viewport);
+
+        function getRelativeCenter() {
+            const imgRect = currentImage.getBoundingClientRect();
+            const viewRect = viewport.getBoundingClientRect();
+            let relX = ((viewRect.left + viewRect.width / 2) - imgRect.left) / imgRect.width;
+            let relY = ((viewRect.top + viewRect.height / 2) - imgRect.top) / imgRect.height;
+            if (viewRect.width >= imgRect.width) relX = 0.5;
+            if (viewRect.height >= imgRect.height) relY = 0.5;
+            return { relX: Math.max(0, Math.min(1, relX)), relY: Math.max(0, Math.min(1, relY)) };
+        }
+
+        function applyZoomCSS() {
+            if (currentScale < minScale) currentScale = minScale;
+            if (currentScale > MAX_ZOOM) currentScale = MAX_ZOOM;
+
+            const newWidth = currentImage.naturalWidth * currentScale;
+            currentImage.style.width = newWidth + 'px';
+            currentImage.style.height = 'auto'; 
+            
+            const vHeight = viewport.clientHeight;
+            const newHeight = currentImage.naturalHeight * currentScale;
+            
+            if (newHeight < vHeight) {
+                currentImage.style.marginTop = (vHeight - newHeight) + 'px';
+            } else {
+                currentImage.style.marginTop = '0px';
+            }
+            
+            const perc = Math.round(currentScale * 100) + '%';
+            zoomText.textContent = perc;
+            
+            const isMin = currentScale <= minScale + 0.01;
+            const isMax = currentScale >= MAX_ZOOM - 0.01;
+            zoomOutBtn.disabled = isMin; 
+            zoomInBtn.disabled = isMax;  
+        }
+
+        function setRelativeCenter(relX, relY) {
+            const currentW = currentImage.naturalWidth * currentScale;
+            const currentH = currentImage.naturalHeight * currentScale;
+            const targetX = relX * currentW;
+            const targetY = relY * currentH;
+            viewport.scrollLeft = targetX - viewport.clientWidth / 2;
+            viewport.scrollTop = targetY - viewport.clientHeight / 2;
+        }
+
+        function actionZoomIn() {
+            if (currentScale >= MAX_ZOOM - 0.001) return; 
+            const center = getRelativeCenter(); currentScale += 0.1;
+            applyZoomCSS(); requestAnimationFrame(() => setRelativeCenter(center.relX, center.relY));
+        }
+        function actionZoomOut() {
+            if (currentScale <= minScale + 0.001) return; 
+            const center = getRelativeCenter(); currentScale -= 0.1;
+            applyZoomCSS(); requestAnimationFrame(() => setRelativeCenter(center.relX, center.relY));
+        }
+
+        zoomInBtn.addEventListener('click', actionZoomIn);
+        zoomOutBtn.addEventListener('click', actionZoomOut);
+
+        // --- KOPPINTÁS ÉS ÉRINTÉS VEZÉRLÉS ---
+        let preventNextClick = false;
+
+        viewport.addEventListener('click', (e) => {
+            if (preventNextClick) return;
+            if (e.target.closest('#hud-controls')) return;
+
+            const rect = viewport.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (y < rect.height * 0.25) jumpImages(-20);
+            else if (y > rect.height * 0.75) jumpImages(20);
+            else if (x < rect.width * 0.33) { showPrevImage(); resetIntervalIfPlaying(); }
+            else if (x > rect.width * 0.66) { showNextImage(); resetIntervalIfPlaying(); }
+        });
+
+        let initialPinchDistance = null, startPinchScale = MAX_ZOOM, pinchRelCenter = { relX: 0.5, relY: 0.5 }, hasPinched = false;
+
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault(); 
+                hasPinched = true;   
+                initialPinchDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                startPinchScale = currentScale;
+                const startPinchScreenCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const startPinchScreenCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                const imgRect = currentImage.getBoundingClientRect();
+                pinchRelCenter.relX = Math.max(0, Math.min(1, (startPinchScreenCenterX - imgRect.left) / imgRect.width));
+                pinchRelCenter.relY = Math.max(0, Math.min(1, (startPinchScreenCenterY - imgRect.top) / imgRect.height));
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && initialPinchDistance !== null) {
+                e.preventDefault(); 
+                const currentDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                currentScale = startPinchScale * (currentDistance / initialPinchDistance);
+                applyZoomCSS();
+                const currentPinchScreenCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const currentPinchScreenCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                const currentW = currentImage.naturalWidth * currentScale;
+                const currentH = currentImage.naturalHeight * currentScale;
+                const viewportRect = viewport.getBoundingClientRect();
+                viewport.scrollLeft = (pinchRelCenter.relX * currentW) - (currentPinchScreenCenterX - viewportRect.left);
+                viewport.scrollTop = (pinchRelCenter.relY * currentH) - (currentPinchScreenCenterY - viewportRect.top);
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                if (hasPinched) { preventNextClick = true; setTimeout(() => preventNextClick = false, 300); hasPinched = false; }
+                initialPinchDistance = null;
+            }
+        });
+
+        // --- HÁTTÉRBEN TÖRTÉNŐ KERESÉS ÉS SZŰRÉS ---
+        function checkImageValid(url, filterType) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    let isValid = true;
+                    const maxDim = Math.max(img.naturalWidth, img.naturalHeight);
+                    const totalPixels = img.naturalWidth * img.naturalHeight;
+
+                    if (filterType === '4k') isValid = (maxDim >= 3800 || totalPixels >= 8000000);
+                    else if (filterType === '2k') isValid = (maxDim >= 1900 || totalPixels >= 2000000);
+                    else if (filterType === '1k') isValid = (maxDim >= 950 || totalPixels >= 800000);
+                    
+                    resolve({ exists: true, isValid: isValid, width: img.naturalWidth, height: img.naturalHeight });
+                };   
+                img.onerror = () => resolve({ exists: false, isValid: false }); 
+                img.src = url;
+            });
+        }
+
+        function handleNewImageFound() {
+            counterTotal.textContent = images.length;
+            if (images.length > 0) counterCurrent.textContent = `${currentIndex + 1}`;
+            if (images.length === 1) { currentIndex = 0; autoplayBtn.disabled = false; updateImage(); } 
+            else if (images.length > 1 && !isAutoPlaying) statusText.textContent = `Térkép ${currentIndex + 1}` + (isSearching ? " (Keresés a háttérben...)" : "");
+        }
+
+        loadBtn.addEventListener('click', async () => {
+            if (isSearching) {
+                currentSearchId++; 
+                isSearching = false;
+                loadBtn.textContent = "Betöltés";
+                loadBtn.style.backgroundColor = ""; 
+                progressText.textContent = "";
+                counterTotal.style.color = '';
+                downloadJsonBtn.style.display = 'none';
+                
+                statusText.textContent = images.length > 0 ? `Térkép ${currentIndex + 1} (Keresés megszakítva)` : "Keresés megszakítva.";
+                if (images.length > 0) downloadJsonBtn.style.display = 'inline-block';
+                return;
+            }
+
+            const text = urlsInput.value.trim();
+            const newWord = replaceInput.value.trim();
+            if (text.length === 0) return;
+
+            const cacheKey = activeFilter + '|' + newWord + '|' + text;
+
+            if (!searchCache[cacheKey]) {
+                searchCache[cacheKey] = { completed: false, images: [], imagesData: [], checkedUrls: {} };
+            }
+
+            if (searchCache[cacheKey].completed) {
+                images = [...searchCache[cacheKey].images];
+                currentImagesData = [...searchCache[cacheKey].imagesData];
+                currentIndex = 0;
+                
+                counterTotal.textContent = images.length;
+                counterCurrent.textContent = images.length > 0 ? "1" : "0";
+                counterCurrent.style.color = ''; counterTotal.style.color = '';
+                
+                fsWrapper.style.display = images.length > 0 ? 'flex' : 'none';
+                hudControls.style.display = images.length > 0 ? 'flex' : 'none';
+                autoplayBtn.disabled = images.length === 0;
+                downloadJsonBtn.style.display = images.length > 0 ? 'inline-block' : 'none';
+                
+                if (images.length > 0) { statusText.textContent = `Térkép 1 (Gyorsítótárból azonnal betöltve)`; updateImage(); } 
+                else { statusText.textContent = "Egyetlen érvényes térképet sem találtam a korábbi keresés során."; }
+                return;
+            }
+
+            let rawUrls = text.split('\n').map(url => url.trim()).filter(url => url.length > 0);
+            rawUrls = rawUrls.map(url => url.replaceAll('mapij', newWord));
+
+            currentSearchId++;
+            const mySearchId = currentSearchId;
+            isSearching = true;
+            
+            loadBtn.textContent = "Leállítás";
+            loadBtn.style.backgroundColor = "#dc3545"; 
+            downloadJsonBtn.style.display = 'none';
+            
+            images = [...searchCache[cacheKey].images];
+            currentImagesData = [...searchCache[cacheKey].imagesData];
+            
+            if (images.length > 0) {
+                fsWrapper.style.display = 'flex'; hudControls.style.display = 'flex';
+                counterTotal.textContent = images.length; counterCurrent.textContent = `${currentIndex + 1}`;
+                updateImage();
+                statusText.textContent = `Térkép ${currentIndex + 1} (Keresés folytatása a megszakítási ponttól...)`;
+                counterTotal.style.color = '#999'; 
+            } else {
+                fsWrapper.style.display = 'none'; hudControls.style.display = 'none';
+                counterCurrent.textContent = "0"; counterTotal.textContent = "0"; counterTotal.style.color = '#999';
+                statusText.textContent = "Térképsorozatok keresése elkezdődött... Kérlek várj.";
+            }
+
+            for (const url of rawUrls) {
+                if (mySearchId !== currentSearchId) return; 
+                const regexMatch = url.match(/^(.*?)(\d+)(\.[a-zA-Z0-9]+(?:[\?#].*)?)$/);
+                
+                if (regexMatch) {
+                    const base = regexMatch[1];
+                    const numLength = regexMatch[2].length;
+                    const ext = regexMatch[3];
+                    let consecutiveErrors = 0;
+
+                    for (let i = 0; i <= 99; i++) {
+                        if (mySearchId !== currentSearchId) return; 
+                        let testUrl = base + String(i).padStart(numLength, '0') + ext;
+
+                        let check;
+                        if (searchCache[cacheKey].checkedUrls[testUrl] !== undefined) {
+                            check = searchCache[cacheKey].checkedUrls[testUrl];
+                        } else {
+                            progressText.textContent = `Ellenőrzés: ${testUrl}`;
+                            check = await checkImageValid(testUrl, activeFilter);
+                            if (mySearchId !== currentSearchId) return; 
+
+                            searchCache[cacheKey].checkedUrls[testUrl] = check;
+                            if (check.exists && check.isValid) {
+                                images.push(testUrl);
+                                searchCache[cacheKey].images.push(testUrl);
+                                const imgData = {url: testUrl, width: check.width, height: check.height};
+                                currentImagesData.push(imgData);
+                                searchCache[cacheKey].imagesData.push(imgData);
+                                handleNewImageFound();
+                            }
+                        }
+
+                        if (check.exists) consecutiveErrors = 0;
+                        else { consecutiveErrors++; if (consecutiveErrors >= 10) break; }
+                    }
+                } else {
+                    if (mySearchId !== currentSearchId) return; 
+                    
+                    let check;
+                    if (searchCache[cacheKey].checkedUrls[url] !== undefined) {
+                        check = searchCache[cacheKey].checkedUrls[url];
+                    } else {
+                        progressText.textContent = `Ellenőrzés: ${url}`;
+                        check = await checkImageValid(url, activeFilter);
+                        if (mySearchId !== currentSearchId) return;
+
+                        searchCache[cacheKey].checkedUrls[url] = check;
+                        if (check.exists && check.isValid) {
+                            images.push(url);
+                            searchCache[cacheKey].images.push(url);
+                            const imgData = {url: url, width: check.width, height: check.height};
+                            currentImagesData.push(imgData);
+                            searchCache[cacheKey].imagesData.push(imgData);
+                            handleNewImageFound();
+                        }
+                    }
+                }
+            }
+
+            if (mySearchId === currentSearchId) {
+                isSearching = false;
+                counterTotal.style.color = '';
+                loadBtn.textContent = "Betöltés";
+                loadBtn.style.backgroundColor = "";
+                progressText.textContent = "";
+                
+                if (images.length > 0) {
+                    statusText.textContent = `Térkép ${currentIndex + 1} (Keresés befejezve)`;
+                    downloadJsonBtn.style.display = 'inline-block';
+                } else {
+                    statusText.textContent = "Egyetlen érvényes (vagy a szűrőnek megfelelő) térképet sem találtam!";
+                }
+
+                searchCache[cacheKey].completed = true;
+            }
+        });
+
+        // --- LAPOZÁS ÉS MEGJELENÍTÉS ---
+        function updateImage() {
+            if (images.length === 0) return;
+            currentLoadSequence++; const mySequence = currentLoadSequence; const targetUrl = images[currentIndex];
+            
+            counterCurrent.textContent = `${currentIndex + 1}`; counterCurrent.style.color = '#999'; 
+            statusText.textContent = `Térkép betöltése... ${currentIndex + 1}` + (isSearching ? " (Keresés a háttérben...)" : "");
+            
+            const preloader = new Image();
+            preloader.onload = () => {
+                if (mySequence !== currentLoadSequence) return;
+                currentImage.src = targetUrl;
+                fsWrapper.style.display = 'flex'; currentImage.style.display = 'block'; hudControls.style.display = 'flex'; 
+                
+                const vWidth = viewport.clientWidth - 15; const vHeight = viewport.clientHeight - 15; 
+                const nWidth = preloader.naturalWidth; const nHeight = preloader.naturalHeight;
+                minScale = (nWidth > 0 && nHeight > 0) ? Math.min(vWidth / nWidth, vHeight / nHeight, MAX_ZOOM) : MAX_ZOOM;
+                
+                if (keepZoomAndScroll) {
+                    currentScale = Math.max(minScale, Math.min(MAX_ZOOM, currentScale));
+                    applyZoomCSS(); requestAnimationFrame(() => setRelativeCenter(savedRelX, savedRelY));
+                    keepZoomAndScroll = false; 
+                } else {
+                    currentScale = minScale; 
+                    applyZoomCSS(); requestAnimationFrame(() => setRelativeCenter(0.5, 0.5));
+                }
+                
+                counterCurrent.style.color = ''; 
+                statusText.textContent = `Térkép ${currentIndex + 1}` + (isSearching ? " (Keresés a háttérben...)" : "");
+                counterCurrent.textContent = `${currentIndex + 1}`; 
+            };
+            preloader.src = targetUrl;
+        }
+
+        function showNextImage() {
+            if (images.length === 0) return; 
+            const center = getRelativeCenter(); savedRelX = center.relX; savedRelY = center.relY; keepZoomAndScroll = true;
+            currentIndex = (currentIndex + 1) % images.length; updateImage();
+        }
+
+        function showPrevImage() {
+            if (images.length === 0) return; 
+            const center = getRelativeCenter(); savedRelX = center.relX; savedRelY = center.relY; keepZoomAndScroll = true;
+            currentIndex = (currentIndex - 1 + images.length) % images.length; updateImage();
+        }
+
+        function jumpImages(offset) {
+            if (images.length === 0) return; 
+            const center = getRelativeCenter(); savedRelX = center.relX; savedRelY = center.relY; keepZoomAndScroll = true;
+            currentIndex += offset;
+            if (currentIndex >= images.length) currentIndex = images.length - 1; 
+            else if (currentIndex < 0) currentIndex = 0; 
+            updateImage(); resetIntervalIfPlaying();
+        }
+
+        // --- OKOS AUTOPLAY ÉS VISSZASZÁMLÁLÓ ---
+        function toggleAutoplay() {
+            if (isAutoPlaying) {
+                clearInterval(playInterval); autoplayBtn.classList.remove('playing'); timerInput.value = originalAutoplayTime;
+            } else {
+                originalAutoplayTime = parseInt(timerInput.value) || 3; currentCountdown = originalAutoplayTime;
+                startInterval(); autoplayBtn.classList.add('playing');
+            }
+            isAutoPlaying = !isAutoPlaying;
+        }
+
+        timerInput.addEventListener('change', (e) => {
+            let val = parseInt(e.target.value);
+            if (!isNaN(val) && val > 0) originalAutoplayTime = val;
+            if (isAutoPlaying) resetIntervalIfPlaying();
+        });
+
+        autoplayBtn.addEventListener('click', toggleAutoplay);
+
+        function startInterval() {
+            playInterval = setInterval(() => {
+                currentCountdown--;
+                if (currentCountdown <= 0) { showNextImage(); currentCountdown = originalAutoplayTime; }
+                if (document.activeElement !== timerInput) timerInput.value = currentCountdown;
+            }, 1000);
+        }
+
+        function resetIntervalIfPlaying() {
+            if (isAutoPlaying) { clearInterval(playInterval); currentCountdown = originalAutoplayTime; timerInput.value = currentCountdown; startInterval(); }
+        }
+    </script>
+</body>
+</html>
